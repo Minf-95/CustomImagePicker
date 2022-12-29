@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:custom_cam_picker/photo.dart';
 import 'package:custom_cam_picker/selectedPhoto.dart';
-import 'package:custom_image_crop/custom_image_crop.dart';
+import 'package:flutter/foundation.dart';
+// import 'package:custom_image_crop/custom_image_crop.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 import 'GridPhoto.dart';
 import 'album.dart';
@@ -27,7 +31,57 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
   int selectedCount = -1;
   int listCount = 0;
 
-  late CustomImageCropController controller;
+  CroppedFile? _croppedFile;
+
+  Future<void> _cropImage(int index) async {
+    AssetEntity entity = selectedPhoto[index].images;
+    File? file = await entity.file;
+    var path = file!.path;
+    print("_images[1].relativePath.toString() : " + path);
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: path,
+      compressFormat: ImageCompressFormat.jpg,
+      compressQuality: 100,
+      aspectRatio: CropAspectRatio(ratioX: 3.0, ratioY: 4.0),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: "자르기 및 회전",
+          toolbarColor: Colors.black,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.original,
+          hideBottomControls: true,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: "자르기 및 회전",
+          cancelButtonTitle: "취소",
+          doneButtonTitle: "완료",
+          hidesNavigationBar: true,
+        ),
+        WebUiSettings(
+          context: context,
+          presentStyle: CropperPresentStyle.dialog,
+          boundary: const CroppieBoundary(
+            width: 520,
+            height: 520,
+          ),
+          viewPort:
+              const CroppieViewPort(width: 480, height: 480, type: 'circle'),
+          enableExif: true,
+          enableZoom: true,
+          showZoomer: true,
+        ),
+      ],
+    );
+    if (croppedFile != null) {
+      setState(() {
+        _croppedFile = croppedFile;
+        selectedPhoto[index].cropStatus = true;
+        selectedPhoto[index].cropImagePath = _croppedFile!.path.toString();
+      });
+    }
+    // }
+  }
 
   Future<void> checkPermission() async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
@@ -43,6 +97,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
     _paths = await PhotoManager.getAssetPathList(
       type: RequestType.image,
     );
+    print("_paths_paths: " + _paths.toString());
 
     _albums = _paths!.map((e) {
       return Album(
@@ -87,7 +142,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
   void initState() {
     super.initState();
     checkPermission();
-    controller = CustomImageCropController();
   }
 
   @override
@@ -133,36 +187,34 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length >= 0
-                                  ? selectedBoxContainer(0)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 0
+                                    ? selectedBoxContainer(0)
+                                    : emptyImageBox()),
                           ),
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length > 1
-                                  ? selectedBoxContainer(1)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 1
+                                    ? selectedBoxContainer(1)
+                                    : emptyImageBox()),
                           ),
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 5, 0, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length > 2
-                                  ? selectedBoxContainer(2)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 5, 0, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 2
+                                    ? selectedBoxContainer(2)
+                                    : emptyImageBox()),
                           ),
                         ],
                       ),
                     ),
+
                     Expanded(
                       flex: 1,
                       child: Row(
@@ -170,49 +222,47 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length > 3
-                                  ? selectedBoxContainer(3)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 3
+                                    ? selectedBoxContainer(3)
+                                    : emptyImageBox()),
                           ),
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length > 4
-                                  ? selectedBoxContainer(4)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 4
+                                    ? selectedBoxContainer(4)
+                                    : emptyImageBox()),
                           ),
                           Expanded(
                             flex: 1,
                             child: Container(
-                              margin: EdgeInsets.fromLTRB(0, 0, 0, 5),
-                              height: MediaQuery.of(context).size.width,
-                              child: selectedPhoto.length > 5
-                                  ? selectedBoxContainer(5)
-                                  : SizedBox(),
-                            ),
+                                margin: EdgeInsets.fromLTRB(0, 0, 0, 5),
+                                height: MediaQuery.of(context).size.width,
+                                child: selectedPhoto.length > 5
+                                    ? selectedBoxContainer(5)
+                                    : emptyImageBox()),
                           ),
                         ],
                       ),
                     ),
-                    //프로필 미리보기 영역 끝------
 
+                    //프로필 미리보기 영역 끝------
                     //앨범 드롭다운 리스트 시작-----
                     Container(
                       height: 35,
                       padding: EdgeInsets.fromLTRB(16, 0, 0, 0),
                       child: _albums.isNotEmpty
                           ? DropdownButton(
+                              underline: SizedBox.shrink(),
                               value: _currentAlbum,
                               items: _albums
                                   .map((e) => DropdownMenuItem(
                                         value: e,
-                                        child: Text(e.name),
+                                        child: Text(e.name,style: TextStyle(fontWeight: FontWeight.bold),),
                                       ))
                                   .toList(),
                               onChanged: (value) =>
@@ -244,7 +294,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                             physics: const BouncingScrollPhysics(),
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3),
+                                    crossAxisCount: 4),
                             itemBuilder: (BuildContext context, int index) {
                               _photo.add(Photo(
                                   images: _images[index],
@@ -319,12 +369,21 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
         ));
   }
 
+  Widget emptyImageBox() => Container(
+        decoration: BoxDecoration(
+            color: Color(0xffD0D0D0),
+            image: DecorationImage(image: AssetImage('assets/emptyImage.png'))),
+      );
+
   Widget selectedCountBoxContainer(int index) {
     return Text(
         _photo[index].selected
             ? (_photo[index].selectedCount + 1).toString()
             : " ",
-        style: TextStyle(fontSize: 15, color: Color(0xffFFFFFF)));
+        style: TextStyle(
+            fontSize: 15,
+            color: Color(0xffFFFFFF),
+            fontWeight: FontWeight.bold));
   }
 
   //프로필 미리보기 박스(선택 된 이미지 컨테이너)
@@ -340,13 +399,19 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
             Container(
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
-                child: selectedPhoto[index].selected
-                    ? AssetEntityImage(
-                        selectedPhoto[index].images,
-                        isOriginal: false,
-                        fit: BoxFit.cover,
-                      )
-                    : SizedBox()
+                child: selectedPhoto[index].cropStatus == false
+                    ? selectedPhoto[index].selected
+                        ? AssetEntityImage(
+                            selectedPhoto[index].images,
+                            isOriginal: false,
+                            fit: BoxFit.cover,
+                          )
+                        : SizedBox()
+                    : kIsWeb
+                        ? Image.network(
+                            selectedPhoto[index].cropImagePath.toString())
+                        : Image.file(
+                            File(selectedPhoto[index].cropImagePath.toString()))
                 // : Text("asd"),
                 ),
             //느낌표, X 표시
@@ -391,61 +456,60 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
             Positioned(
               bottom: 0,
               child: InkWell(
-                onTap: (){
-
+                onTap: () {
+                  _cropImage(index);
                 },
                 child: Container(
-                width: 25,
-                height: 25,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
+                  width: 25,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.crop,
+                    color: Color(0xffFFFFFF),
+                    size: 15,
+                  ),
                 ),
-                child: Icon(
-                  Icons.crop,
-                  color: Color(0xffFFFFFF),
-                  size: 15,
-                ),
-              ),),
+              ),
             ),
           ],
         ),
       );
     } else {
-      return Text("none");
+      return Container(
+        color: Colors.red,
+      );
     }
   }
 
   //이미지 박스 선택 시
   void checkBoxCount(int index, String at) {
+    print("photo::  " + _images[0].toString());
     if (at == "topPhoto") {
       //topPhoto에서 인덱스는 미리보기에 있는 인덱스
       print(selectedPhoto[index].imageIndex);
-
       //먼저 selectedPhoto에서 선택 된 이미지가 photo의 몇번 인덱스에 있는지 확인
       final index2 = _photo.indexWhere(
-              (element) => element.count == selectedPhoto[index].imageIndex);
+          (element) => element.count == selectedPhoto[index].imageIndex);
 
       //찾은 인덱스를 넣어서 체크 해제 처리하기
       setState(() {
         selectedPhoto.removeAt(index);
         _photo![index2].selected = false;
         selectedCount--;
-
       });
 
       //사진 리스트를 다시 그려주는 부분
       for (var i = 0; i < selectedPhoto.length; i++) {
         final index3 = _photo.indexWhere(
-                (element) => element.selectedCount == selectedPhoto[i].count);
+            (element) => element.selectedCount == selectedPhoto[i].count);
         setState(() {
           _photo[index3].selectedCount = i;
           selectedPhoto[i].count = i;
         });
       }
-
-
-
     } else {
       //bottomPhoto에서 인덱스는 앨범 리스트에 있는 사진 자리 인덱스
       print(at + " : " + index.toString());
@@ -468,12 +532,13 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
             }
             selectedCount--;
           });
-        }else{
+        } else {
           showToast("6장만 등록가능합니다.");
         }
       } else {
         print(" index: " + index.toString());
-        print("_photo![index].selectedCount: " + _photo![index].selectedCount.toString());
+        print("_photo![index].selectedCount: " +
+            _photo![index].selectedCount.toString());
         if (_photo![index].selected) {
           setState(() {
             _photo![index].selected = false;
@@ -493,22 +558,23 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
             selectedCount++;
             _photo![index].selected = true;
             selectedPhoto.add(SelectedPhoto(
-                images: _photo![index].images,
-                selected: true,
-                count: selectedCount,
-                imageIndex: index));
+              images: _photo![index].images,
+              selected: true,
+              count: selectedCount,
+              imageIndex: index,
+              cropStatus: false,
+            ));
             // selectedPhoto[selectedPhoto.length].count=selectedPhoto.length;
             _photo![index].selectedCount = selectedCount;
 
             for (var i = 0; i < selectedPhoto.length; i++) {
               final index2 = _photo.indexWhere(
-                      (element) => element.selectedCount == selectedPhoto[i].count);
+                  (element) => element.selectedCount == selectedPhoto[i].count);
               setState(() {
                 _photo[index2].selectedCount = i;
                 selectedPhoto[i].count = i;
               });
             }
-
           });
         }
       }
