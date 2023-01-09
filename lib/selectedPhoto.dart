@@ -12,6 +12,10 @@ class SelectedPhoto {
   int imageIndex;
   //크롭된거면 true, 아니면 false
   bool cropStatus;
+  //새로운 사진인지 아닌지 판별
+  bool isNewPhoto;
+  //새로운 사진 느낌표 펼쳐졌는지 안펼쳐졌는지 확인
+  bool isOpenNotice;
   //크롭 된 이미지 경로를 저장해주는 변수
   String? cropImagePath;
 
@@ -22,6 +26,8 @@ class SelectedPhoto {
     required this.count,
     required this.imageIndex,
     required this.cropStatus,
+    required this.isNewPhoto,
+    required this.isOpenNotice,
     this.cropImagePath,
   });
 }

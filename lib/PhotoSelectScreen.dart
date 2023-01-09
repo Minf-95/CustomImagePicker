@@ -25,11 +25,12 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
   late List<AssetEntity> _images;
   int _currentPage = 0;
   late Album _currentAlbum;
-  List<Photo> _photo = [];
+  final List<Photo> _photo = [];
   late List<SelectedPhoto> selectedPhoto = [];
   int count = 0;
   int selectedCount = -1;
-  int listCount = 0;
+  // int listCount = 0;
+  String cropImageTitle = "";
 
   CroppedFile? _croppedFile;
 
@@ -37,7 +38,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
     AssetEntity entity = selectedPhoto[index].images;
     File? file = await entity.file;
     var path = file!.path;
-    print("_images[1].relativePath.toString() : " + path);
     final croppedFile = await ImageCropper().cropImage(
       sourcePath: path,
       compressFormat: ImageCompressFormat.jpg,
@@ -45,7 +45,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
       aspectRatio: CropAspectRatio(ratioX: 3.0, ratioY: 4.0),
       uiSettings: [
         AndroidUiSettings(
-          toolbarTitle: "자르기 및 회전",
+          toolbarTitle: "자르기 및 회전 $cropImageTitle",
           toolbarColor: Colors.black,
           toolbarWidgetColor: Colors.white,
           initAspectRatio: CropAspectRatioPreset.original,
@@ -53,7 +53,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
           lockAspectRatio: true,
         ),
         IOSUiSettings(
-          title: "자르기 및 회전",
+          title: "자르기 및 회전 $cropImageTitle",
           cancelButtonTitle: "취소",
           doneButtonTitle: "완료",
           hidesNavigationBar: true,
@@ -89,21 +89,20 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
           break;
         }
       }
-      if (checkCropStatus == false) {
-        showToast("크롭해주세요" + nonCropIndex.toString());
-        _cropImage(nonCropIndex);
-      }else{
-        showToast("끝" + nonCropIndex.toString());
-
+      if (nonCropIndex == 1) {
+        setState(() {
+          cropImageTitle = "(커버사진)";
+        });
+      } else {
+        setState(() {
+          cropImageTitle = "(대표사진)";
+        });
       }
-
     }
-    // }
   }
 
   Future<void> checkPermission() async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    print("ps.isAuth: " + ps.isAuth.toString());
     if (ps.isAuth) {
       await getAlbum();
     } else {
@@ -115,7 +114,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
     _paths = await PhotoManager.getAssetPathList(
       type: RequestType.image,
     );
-    print("_paths_paths: " + _paths.toString());
 
     _albums = _paths!.map((e) {
       return Album(
@@ -146,13 +144,17 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
       } else {
         _images.addAll(loadImages);
       }
-      // setState(() {
-      //   for (var i = 0; i <= 5; i++) {
-      //     selectedPhoto.add(SelectedPhoto(
-      //         images: _images[i], selected: false, count: 0, imageIndex: 0));
-      //   }
-      // }
-      // );
+
+      setState(() {
+        _photo.clear();
+        for (var i = 0; i < _images.length; i++) {
+          _photo.add(Photo(
+              images: _images[i],
+              selected: false,
+              count: i,
+              selectedCount: 100));
+        }
+      });
     });
   }
 
@@ -175,14 +177,14 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
             },
           ),
           bottom: PreferredSize(
+            preferredSize: const Size.fromHeight((0.5)),
             child: Container(
               color: Colors.grey,
               height: 0.5,
             ),
-            preferredSize: const Size.fromHeight((0.5)),
           ),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: Text(
+          title: const Text(
             "프로필 사진 관리",
             style: TextStyle(color: Colors.black),
           ),
@@ -198,35 +200,26 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                     break;
                   }
                 }
+                if (nonCropIndex == 0) {
+                  setState(() {
+                    cropImageTitle = "(대표사진)";
+                  });
+                } else {
+                  setState(() {
+                    cropImageTitle = "(커버사진)";
+                  });
+                }
                 if (checkCropStatus == false) {
-                  showToast("크롭해주세요" + nonCropIndex.toString());
+                  // showToast("크롭해주세요" + nonCropIndex.toString());
                   _cropImage(nonCropIndex);
                 }
-
-                for (var i = 0; i < selectedPhoto.length; i++) {
-                  print("------- selectedPhoto Index:  " + i.toString() + " -------");
-                  print("selectedPhoto[i]imageIndex : " + selectedPhoto[i].imageIndex.toString());
-                  print("selectedPhoto[i]count : " + selectedPhoto[i].count.toString());
-                  print("selectedPhoto[i]selected : " + selectedPhoto[i].selected.toString());
-                  print("selectedPhoto[i]cropStatus : " + selectedPhoto[i].cropStatus.toString());
-                  print("-----------------------");
-                }
-
-                for(var i=0 ; i< _photo.length;i++){
-                  if(_photo[i].selected){
-                    print("------- _photo Index:  " + i.toString() + " -------");
-                    print("_photo[i]count : " + _photo[i].count.toString());
-                    print("_photo[i]selectedCount : " + _photo[i].selectedCount.toString());
-                    print("-----------------------");
-                  }
-                }
               },
-              child: Text(
+              style: ElevatedButton.styleFrom(
+                  splashFactory: NoSplash.splashFactory),
+              child: const Text(
                 "완료",
                 style: TextStyle(color: Colors.black, fontSize: 15),
               ),
-              style: ElevatedButton.styleFrom(
-                  splashFactory: NoSplash.splashFactory),
             )
           ],
         ),
@@ -248,7 +241,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 5, 5, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 0
                                     ? selectedBoxContainer(0)
@@ -257,7 +250,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 5, 5, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 5, 5, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 1
                                     ? selectedBoxContainer(1)
@@ -266,7 +259,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 5, 0, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 5, 0, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 2
                                     ? selectedBoxContainer(2)
@@ -283,7 +276,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 0, 5, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 3
                                     ? selectedBoxContainer(3)
@@ -292,7 +285,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 0, 5, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 0, 5, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 4
                                     ? selectedBoxContainer(4)
@@ -301,7 +294,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           Expanded(
                             flex: 1,
                             child: Container(
-                                margin: EdgeInsets.fromLTRB(0, 0, 0, 5),
+                                margin: const EdgeInsets.fromLTRB(0, 0, 0, 5),
                                 height: MediaQuery.of(context).size.width,
                                 child: selectedPhoto.length > 5
                                     ? selectedBoxContainer(5)
@@ -325,7 +318,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                                         value: e,
                                         child: Text(
                                           e.name,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               fontWeight: FontWeight.bold),
                                         ),
                                       ))
@@ -361,12 +354,11 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 4),
                             itemBuilder: (BuildContext context, int index) {
-                              print("index: " + index.toString());
-                              _photo.add(Photo(
-                                  images: _images[index],
-                                  selected: false,
-                                  count: index,
-                                  selectedCount: 100));
+                              // _photo.add(Photo(
+                              //     images: _images[index],
+                              //     selected: false,
+                              //     count: index,
+                              //     selectedCount: 100));
                               return InkWell(
                                 onTap: () {
                                   checkBoxCount(index, "bottomPhoto");
@@ -435,12 +427,8 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
         ));
   }
 
-  // Widget galleryPhotosContainer(){
-  //
-  // }
-
   Widget emptyImageBox() => Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
             color: Color(0xffD0D0D0),
             image: DecorationImage(image: AssetImage('assets/emptyImage.png'))),
       );
@@ -451,7 +439,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
         _photo[index].selected
             ? (_photo[index].selectedCount + 1).toString()
             : " ",
-        style: TextStyle(
+        style: const TextStyle(
             fontSize: 15,
             color: Color(0xffFFFFFF),
             fontWeight: FontWeight.bold));
@@ -459,7 +447,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
 
   //프로필 미리보기 박스(선택 된 이미지 컨테이너)
   Widget selectedBoxContainer(int index) {
-    print("selectedBoxContainer Index : " + index.toString());
     if (selectedPhoto.length != 0) {
       // if (selectedPhoto[index].selected) {
       return Container(
@@ -467,7 +454,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
         height: MediaQuery.of(context).size.height,
         child: Stack(
           children: <Widget>[
-            Container(
+            SizedBox(
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 child: selectedPhoto[index].cropStatus == false
@@ -477,7 +464,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                             isOriginal: false,
                             fit: BoxFit.cover,
                           )
-                        : SizedBox()
+                        : const SizedBox()
                     : kIsWeb
                         ? Image.network(
                             selectedPhoto[index].cropImagePath.toString())
@@ -485,7 +472,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                             File(selectedPhoto[index].cropImagePath.toString()))
                 // : Text("asd"),
                 ),
-
 
             Positioned(
               bottom: 0,
@@ -500,7 +486,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                     color: Colors.black.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.crop,
                     color: Color(0xffFFFFFF),
                     size: 15,
@@ -523,7 +509,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                         decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.5),
                             borderRadius: BorderRadius.circular((10))),
-                        child: Text(
+                        child: const Text(
                           "대표사진",
                           style: TextStyle(fontSize: 12, color: Colors.white),
                         ),
@@ -544,7 +530,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                             decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular((10))),
-                            child: Text(
+                            child: const Text(
                               "커버사진",
                               style:
                                   TextStyle(fontSize: 12, color: Colors.white),
@@ -566,7 +552,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
+                        children: const <Widget>[
                           Text(
                             "노출되고 싶은 위치를\n지정해주세요.",
                             style: TextStyle(
@@ -591,7 +577,7 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
+                            children: const <Widget>[
                               Text(
                                 "노출되고 싶은 위치를\n지정해주세요.",
                                 style: TextStyle(
@@ -606,46 +592,86 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
                         ))
                     : SizedBox(),
             //느낌표, X 표시
-            Container(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    // 느낌표
-                    InkWell(
-                      onTap: () {},
-                      child: Container(
-                        width: 25,
-                        height: 25,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.question_mark_sharp,
-                          color: Color(0xffFFFFFF),
-                          size: 15,
-                        ),
-                      ),
-                    ),
-                    // X 표시
-                    InkWell(
-                      onTap: () {
-                        checkBoxCount(index, "topPhoto");
-                      },
-                      child: Container(
-                        width: 25,
-                        height: 25,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.close, color: Color(0xffFFFFFF)),
-                      ),
-                    ),
-                  ],
-                )),
+            Positioned(
+              left: 0,
+              child: InkWell(
+                onTap: () {
+                  showToast("새로운 사진은 운영팀의 승인 후 적용됩니다");
+                },
+                child: Container(
+                  width: 25,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.question_mark_sharp,
+                    color: Color(0xffFFFFFF),
+                    size: 15,
+                  ),
+                ),
+              ),
+            ),
 
-
+            Positioned(
+              right: 0,
+              child: InkWell(
+                onTap: () {
+                  checkBoxCount(index, "topPhoto");
+                },
+                child: Container(
+                  width: 25,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.close, color: Color(0xffFFFFFF)),
+                ),
+              ),
+            )
+            // Container(
+            //     child: Row(
+            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //   children: <Widget>[
+            //     // 느낌표
+            //     InkWell(
+            //       onTap: () {
+            //
+            //
+            //       },
+            //       child: Container(
+            //         width: 25,
+            //         height: 25,
+            //         decoration: BoxDecoration(
+            //           color: Colors.black.withOpacity(0.5),
+            //           shape: BoxShape.circle,
+            //         ),
+            //         child: const Icon(
+            //           Icons.question_mark_sharp,
+            //           color: Color(0xffFFFFFF),
+            //           size: 15,
+            //         ),
+            //       ),
+            //     ),
+            //     // X 표시
+            //     InkWell(
+            //       onTap: () {
+            //         checkBoxCount(index, "topPhoto");
+            //       },
+            //       child: Container(
+            //         width: 25,
+            //         height: 25,
+            //         decoration: BoxDecoration(
+            //           color: Colors.black.withOpacity(0.5),
+            //           shape: BoxShape.circle,
+            //         ),
+            //         child: Icon(Icons.close, color: Color(0xffFFFFFF)),
+            //       ),
+            //     ),
+            //   ],
+            // )),
           ],
         ),
       );
@@ -660,7 +686,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
   void checkBoxCount(int index, String at) {
     if (at == "topPhoto") {
       //topPhoto에서 인덱스는 미리보기에 있는 인덱스
-      print(selectedPhoto[index].imageIndex);
       //먼저 selectedPhoto에서 선택 된 이미지가 photo의 몇번 인덱스에 있는지 확인
       final index2 = _photo.indexWhere(
           (element) => element.count == selectedPhoto[index].imageIndex);
@@ -669,100 +694,90 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
       setState(() {
         selectedPhoto.removeAt(index);
         _photo![index2].selected = false;
-        selectedCount--;
       });
 
-      //사진 리스트를 다시 그려주는 부분
+      //사진 미리보기 리스트에서 카운트를 재정렬
       for (var i = 0; i < selectedPhoto.length; i++) {
-        final index3 = _photo.indexWhere(
-            (element) => element.selectedCount == selectedPhoto[i].count);
+        selectedCount = i;
+        selectedPhoto[i].count = selectedCount;
+      }
+
+      //전체 사진리스트에서 미리보기 리스트와 같은 사진이 있다면 번호를 넣어줌
+      for (var i = 0; i < selectedPhoto.length; i++) {
+        final index2 = _photo.indexWhere(
+            (element) => element.count == selectedPhoto[i].imageIndex);
         setState(() {
-          _photo[index3].selectedCount = i;
-          selectedPhoto[i].count = i;
+          _photo[index2].selectedCount = selectedPhoto[i].count;
         });
       }
     } else {
       //bottomPhoto에서 인덱스는 앨범 리스트에 있는 사진 자리 인덱스
-      print(at + " : " + index.toString());
-      setState(() {
-        listCount = 0;
-      });
       if (selectedPhoto.length > 5) {
-        print("selectedCount >= 5 여기로 들어왔어");
-        if (_photo![index].selected) {
+        selectedCount = 5;
+        if (_photo[index].selected) {
           setState(() {
-            //체크 해제 처리
-            _photo![index].selected = false;
-            selectedPhoto.removeAt(_photo![index].selectedCount);
-
-            //재배열
+            //선택 된 박스 해제
+            _photo[index].selected = false;
+            //선택 된 사진 리스트에서 전체 사진 리스트에서 삭제
+            selectedPhoto.removeAt(_photo[index].selectedCount);
+            //사진 미리보기 리스트에서 카운트를 재정렬
+            for (var i = 0; i < selectedPhoto.length; i++) {
+              selectedCount = i;
+              selectedPhoto[i].count = selectedCount;
+            }
+            //전체 사진리스트에서 미리보기 리스트와 같은 사진이 있다면 번호를 넣어줌
             for (var i = 0; i < selectedPhoto.length; i++) {
               final index2 = _photo.indexWhere(
-                  (element) => element.selectedCount == selectedPhoto[i].count);
+                  (element) => element.count == selectedPhoto[i].imageIndex);
               setState(() {
-                _photo[index2].selectedCount = i;
-                selectedPhoto[i].count = i;
+                _photo[index2].selectedCount = selectedPhoto[i].count;
               });
             }
-            selectedCount--;
           });
         } else {
           showToast("6장만 등록가능합니다.");
         }
       } else {
-        //불협화음이 나오는곳
-        print(" index: " + index.toString());
-        print("_photo![index].selectedCount: " +
-            _photo![index].selectedCount.toString());
-        if (_photo![index].selected) {
+        //아무것도 없을 경우 카운트 -1 로 초기화
+        if (selectedPhoto.length == 0) {
+          selectedCount = -1;
+        }
+        //선택한 사진이 체크가 되어있는 사진인지 / 아닌지를 판별
+        if (_photo[index].selected) {
           setState(() {
             //선택 된 박스 해제
-            _photo![index].selected = false;
+            _photo[index].selected = false;
             //선택 된 사진 리스트에서 전체 사진 리스트에서 삭제
-            selectedPhoto.removeAt(_photo![index].selectedCount);
+            selectedPhoto.removeAt(_photo[index].selectedCount);
+            //사진 미리보기 리스트에서 카운트를 재정렬
             for (var i = 0; i < selectedPhoto.length; i++) {
-              selectedCount=i;
-              print("selectedCount: "+ selectedCount.toString());
-
+              selectedCount = i;
+              selectedPhoto[i].count = selectedCount;
+            }
+            //전체 사진리스트에서 미리보기 리스트와 같은 사진이 있다면 번호를 넣어줌
+            for (var i = 0; i < selectedPhoto.length; i++) {
               final index2 = _photo.indexWhere(
-                  (element) => element.selectedCount == selectedPhoto[i].count);
+                  (element) => element.count == selectedPhoto[i].imageIndex);
               setState(() {
-                _photo[index2].selectedCount = selectedCount;
-                print("index2: "+ index2.toString());
-                print("_photo[index2].selectedCount: "+ _photo[index2].selectedCount.toString());
-                selectedPhoto[i].count = selectedCount;
+                _photo[index2].selectedCount = selectedPhoto[i].count;
               });
             }
-            // selectedCount--;
           });
         } else {
           setState(() {
             selectedCount++;
-            print("checkBoxCount._photo:  " + _photo.length.toString());
-            print("checkBoxCount.i:  " + index.toString());
 
-            for(var i =0;i<_photo.length;i++){
-              print("checkBoxCount.i:  " + i.toString());
-              print("checkBoxCount.photoCount:  " + _photo[i].count.toString());
-            }
-            _photo![index].selected = true;
+            _photo[index].selected = true;
             selectedPhoto.add(SelectedPhoto(
-              images: _photo![index].images,
+              images: _photo[index].images,
               selected: true,
               count: selectedCount,
               imageIndex: index,
               cropStatus: false,
+              isNewPhoto: false,
+              isOpenNotice: false,
             ));
-            // selectedPhoto[selectedPhoto.length].count=selectedPhoto.length;
-            _photo![index].selectedCount = selectedCount;
-            // for (var i = 0; i < selectedPhoto.length; i++) {
-            //   final index2 = _photo.indexWhere(
-            //       (element) => element.selectedCount == selectedPhoto[i].count);
-            //   setState(() {
-            //     _photo[index2].selectedCount = i;
-            //     selectedPhoto[i].count = i;
-            //   });
-            // }
+            _photo[index].selectedCount = selectedCount;
           });
         }
       }
@@ -770,6 +785,6 @@ class _PhotoSelectScreenState extends State<PhotoSelectScreen> {
   }
 
   void showToast(text) {
-    Fluttertoast.showToast(msg: text.toString(), gravity: ToastGravity.BOTTOM);
+    Fluttertoast.showToast(msg: text.toString(), gravity: ToastGravity.BOTTOM,fontSize: 10);
   }
 }
